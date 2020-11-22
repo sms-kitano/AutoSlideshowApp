@@ -8,6 +8,7 @@ import android.os.Build
 import android.util.Log
 import android.provider.MediaStore
 import android.content.ContentUris
+import android.database.Cursor
 import android.os.Handler
 import android.view.View
 import kotlinx.android.synthetic.main.activity_main.*
@@ -17,12 +18,13 @@ class MainActivity : AppCompatActivity() {
 
     private val PERMISSIONS_REQUEST_CODE = 100
 
-    private var mTimer: Timer? = null
-
     // タイマー用の時間のための変数
+    private var mTimer: Timer? = null
     private var mTimerSec = 0.0
-
     private var mHandler = Handler()
+
+    //画像を表示するためのカーソルの変数
+    private var cursor : Cursor? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,7 +60,7 @@ class MainActivity : AppCompatActivity() {
     private fun getContentsInfo() {
         // 画像の情報を取得する
         val resolver = contentResolver
-        val cursor = resolver.query(
+        cursor = resolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI, // データの種類
             null, // 項目(null = 全項目)
             null, // フィルタ条件(null = フィルタなし)
@@ -67,28 +69,29 @@ class MainActivity : AppCompatActivity() {
         )
 
         if (cursor!!.moveToFirst()) {
-                // indexからIDを取得し、そのIDから画像のURIを取得する
-                val fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-                val id = cursor.getLong(fieldIndex)
-                val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+            // indexからIDを取得し、そのIDから画像のURIを取得する
+            val fieldIndex = cursor!!.getColumnIndex(MediaStore.Images.Media._ID)
+            val id = cursor!!.getLong(fieldIndex)
+            val imageUri =
+                ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
 
-                Log.d("CURSOR","first:${cursor.getPosition()}")
-                imageView.setImageURI(imageUri)
+            Log.d("CURSOR", "first:${cursor!!.getPosition()}")
+            imageView.setImageURI(imageUri)
         }
 
         //進むボタンで1つ先の画像を表示
         next_button.setOnClickListener {
-                if (cursor.moveToNext()) {
-                    val fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-                    val id = cursor.getLong(fieldIndex)
+                if (cursor!!.moveToNext()) {
+                    val fieldIndex = cursor!!.getColumnIndex(MediaStore.Images.Media._ID)
+                    val id = cursor!!.getLong(fieldIndex)
                     val imageUri =
                         ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
 
                     imageView.setImageURI(imageUri)
-                } else if (cursor.moveToFirst()) {
+                } else if (cursor!!.moveToFirst()) {
                     //最後の画像の表示時に、進むボタンをタップすると、最初の画像が表示される
-                    val fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-                    val id = cursor.getLong(fieldIndex)
+                    val fieldIndex = cursor!!.getColumnIndex(MediaStore.Images.Media._ID)
+                    val id = cursor!!.getLong(fieldIndex)
                     val imageUri =
                         ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
 
@@ -99,16 +102,16 @@ class MainActivity : AppCompatActivity() {
 
         //戻るボタンで1つ前の画像を表示
         back_button.setOnClickListener {
-            if(cursor.moveToPrevious()) {
-                val fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-                val id = cursor.getLong(fieldIndex)
+            if(cursor!!.moveToPrevious()) {
+                val fieldIndex = cursor!!.getColumnIndex(MediaStore.Images.Media._ID)
+                val id = cursor!!.getLong(fieldIndex)
                 val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
 
                 imageView.setImageURI(imageUri)
-            } else if(cursor.moveToLast()){
+            } else if(cursor!!.moveToLast()){
                 //最初の画像の表示時に、戻るボタンをタップすると、最後の画像が表示される
-                val fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-                val id = cursor.getLong(fieldIndex)
+                val fieldIndex = cursor!!.getColumnIndex(MediaStore.Images.Media._ID)
+                val id = cursor!!.getLong(fieldIndex)
                 val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
 
                 imageView.setImageURI(imageUri)
@@ -132,19 +135,19 @@ class MainActivity : AppCompatActivity() {
                     override fun run() {
                         mTimerSec += 0.1
                         mHandler.post {
-                            if (cursor.moveToNext()) {
-                                val fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-                                val id = cursor.getLong(fieldIndex)
+                            if (cursor!!.moveToNext()) {
+                                val fieldIndex = cursor!!.getColumnIndex(MediaStore.Images.Media._ID)
+                                val id = cursor!!.getLong(fieldIndex)
                                 val imageUri = ContentUris.withAppendedId(
                                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                                     id
                                 )
 
                                 imageView.setImageURI(imageUri)
-                            } else if (cursor.moveToFirst()) {
+                            } else if (cursor!!.moveToFirst()) {
                                 //最後の画像の表示後は、最初の画像が表示される
-                                val fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID)
-                                val id = cursor.getLong(fieldIndex)
+                                val fieldIndex = cursor!!.getColumnIndex(MediaStore.Images.Media._ID)
+                                val id = cursor!!.getLong(fieldIndex)
                                 val imageUri = ContentUris.withAppendedId(
                                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                                     id
@@ -166,6 +169,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        //cursor.close()　アクティビティが破棄されるタイミング　onDestroy, onPause→onResumeで復帰
+
     }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        cursor!!.close()
+
+    }
+
 }
